@@ -1,0 +1,26 @@
+{
+    "id": "96230810",
+    "path": "~/Desktop/egev2/RhinoApplication/app/view/go_enrichment.R",
+    "project_path": "app/view/go_enrichment.R",
+    "type": "r_source",
+    "hash": "0",
+    "contents": "",
+    "dirty": false,
+    "created": 1715684934086.0,
+    "source_on_save": false,
+    "relative_order": 5,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "113,31",
+        "scrollLine": "104"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1715688208,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1715688208258,
+    "read_only": false,
+    "read_only_alternatives": []
+}

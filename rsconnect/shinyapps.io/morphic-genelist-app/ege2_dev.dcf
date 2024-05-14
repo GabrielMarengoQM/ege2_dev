@@ -1,0 +1,10 @@
+name: ege2_dev
+title:
+username: morphic-genelist-app
+account: morphic-genelist-app
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 11998849
+bundleId: 8613799
+url: https://whri-phenogenomics.shinyapps.io/ege2_dev/
+version: 1
