@@ -51,7 +51,7 @@ server <- function(id, saved_lists_and_filters, edited_list) {
         # Create an observeEvent for each action button associated with each list
         observeEvent(input[[paste0("edit_list_", name)]], {
           # Update the edited list reactive value with filters for currently edited list
-          filters <- saved_lists_and_filters()[[name]][[2]]
+          filters <- saved_lists_and_filters()[[name]][['filters']]
           data_to_add <- list('name' = name, 'filters' = filters)
           edited_list(data_to_add)
         }, ignoreInit = TRUE)

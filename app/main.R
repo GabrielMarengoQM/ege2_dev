@@ -12,7 +12,9 @@ box::use(
   app/view/filters,
   app/view/edit_clear,
   app/view/go_enrichment,
-  app/view/plots
+  app/view/reactome_enrichment,
+  app/view/plots,
+  app/view/odds_ratio
 )
 
 # enable Shiny bookmarking ----
@@ -46,6 +48,14 @@ ui <- function(id) {
       tabPanel(
         'Gene Ontology Semantic Similarity',
         go_enrichment$ui(ns("go_enrichment"))
+      ),
+      tabPanel(
+        'Reactome enrichment',
+        reactome_enrichment$ui(ns("reactome_enrichment"))
+      ),
+      tabPanel(
+        'Odds Ratio',
+        odds_ratio$ui(ns("odds_ratio"))
       )
     )
   )
@@ -69,6 +79,8 @@ server <- function(id) {
     plots$server("plots", saved_lists_and_filters, data)
     # Analysis
     go_enrichment$server("go_enrichment", saved_lists_and_filters, data)
+    reactome_enrichment$server("reactome_enrichment", saved_lists_and_filters, data)
+    odds_ratio$server("odds_ratio", saved_lists_and_filters, data)
 
     # Handle bookmarking ----
     onBookmark(function(state) {

@@ -1,15 +1,15 @@
 {
     "dialog-state": {
-        "query": "crew",
+        "query": "saved_lists_and_filters",
         "path": "",
         "regex": false,
         "caseSensitive": false,
         "wholeWord": false,
         "filePatterns": [],
-        "useGitGrep": false,
+        "useGitGrep": true,
         "excludeGitIgnore": true,
         "excludeFilePatterns": [],
-        "resultsCount": 5,
+        "resultsCount": 50,
         "errorCount": 0,
         "replaceErrors": "",
         "projectRelative": true

@@ -10,7 +10,6 @@ box::use(
   clusterProfiler[...],
   rrvgo[...],
   stats[...],
-  callr[...],
   org.Hs.eg.db[...],
   crew[...]
 )
@@ -111,13 +110,12 @@ server <- function(id, saved_lists_and_filters, data) {
 
         symbol <- input$gene_list_picker[i]
 
-        print(symbol)
-        print(saved_lists_and_filters()[[symbol]][[1]])
+
         controller$push(
           command = run_task(gene_list, background, ontology, pval, qval, percent_slice, threshold),
           # pass the function to the workers, and arguments needed
           data = list(run_task = run_task,
-                      gene_list = saved_lists_and_filters()[[symbol]][[1]],
+                      gene_list = saved_lists_and_filters()[[symbol]][['gene_list']],
                       background = unique(data$gene_symbol),
                       ontology = input$ontology_picker,
                       pval = input$p_val_input,

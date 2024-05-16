@@ -53,19 +53,19 @@ server <- function(id, saved_lists_and_filters, edited_list, data) {
       tabsetPanel(
         id = session$ns("filter_tabs"),
         tabPanel("Gene symbol",
-                 lapply(vars()[1:3], function(var) {
+                 lapply(vars()[1:4], function(var) {
                    filters_utils$make_ui(data[[var]], var, id, session)
                  })),
         tabPanel("Mouse",
-                 lapply(vars()[4:9], function(var) {
+                 lapply(vars()[5:10], function(var) {
                    filters_utils$make_ui(data[[var]], var, id, session)
                  })),
         tabPanel("Disease",
-                 lapply(vars()[10:18], function(var) {
+                 lapply(vars()[11:19], function(var) {
                    filters_utils$make_ui(data[[var]], var, id, session)
                  })),
         tabPanel("Constraint",
-                 lapply(vars()[19:29], function(var) {
+                 lapply(vars()[20:30], function(var) {
                    filters_utils$make_ui(data[[var]], var, id, session)
                  })),
         tabPanel("Gene list upload",
@@ -73,7 +73,6 @@ server <- function(id, saved_lists_and_filters, edited_list, data) {
         )
       )
     })
-    # I WANT TO ADD GENE LIST AND FILTERS INSTEAD USING 1 and 2 for indexing saved_lists_and_filters ***********
     # currently editing ----
     output$currently_editing <- renderText({
       if (!is.null(edited_list()))
@@ -110,7 +109,7 @@ server <- function(id, saved_lists_and_filters, edited_list, data) {
       # Assign current filters to the list using the list name as the key
       gene_list <- data[selected(), 1]
       # gene_list <- discard(gene_list, is.na)
-      saved_data <- list(unique(gene_list), current_filters())
+      saved_data <- list('gene_list' = unique(gene_list), 'filters' = current_filters())
       current_lists[[list_name]] <- saved_data
       # Update saved_lists_and_filters with the new list
       saved_lists_and_filters(current_lists)
