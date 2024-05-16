@@ -42,33 +42,30 @@ ui <- function(id) {
 }
 
 #' @export
-server <- function(id, saved_lists_and_filters, edited_list) {
+server <- function(id, saved_lists_and_filters, edited_list, data) {
   moduleServer(id, function(input, output, session) {
-    # import data ----
-    data <- read.fst("./data/all_data_ege.fst")
     # get data col names ----
     vars <- reactive(names(data))
-    # set index for splitting UI ----
-    half_index <- reactive(ceiling(length(vars()) / 2))
+
     # generate filters ui ----
     output$filter <- renderUI({
       ns <- NS(id)
       tabsetPanel(
         id = session$ns("filter_tabs"),
         tabPanel("Gene symbol",
-                 lapply(vars()[1], function(var) {
+                 lapply(vars()[1:3], function(var) {
                    filters_utils$make_ui(data[[var]], var, id, session)
                  })),
         tabPanel("Mouse",
-                 lapply(vars()[2:7], function(var) {
+                 lapply(vars()[4:9], function(var) {
                    filters_utils$make_ui(data[[var]], var, id, session)
                  })),
         tabPanel("Disease",
-                 lapply(vars()[8:16], function(var) {
+                 lapply(vars()[10:18], function(var) {
                    filters_utils$make_ui(data[[var]], var, id, session)
                  })),
         tabPanel("Constraint",
-                 lapply(vars()[17:25], function(var) {
+                 lapply(vars()[19:29], function(var) {
                    filters_utils$make_ui(data[[var]], var, id, session)
                  })),
         tabPanel("Gene list upload",
@@ -76,11 +73,11 @@ server <- function(id, saved_lists_and_filters, edited_list) {
         )
       )
     })
-
+    # I WANT TO ADD GENE LIST AND FILTERS INSTEAD USING 1 and 2 for indexing saved_lists_and_filters ***********
     # currently editing ----
     output$currently_editing <- renderText({
       if (!is.null(edited_list()))
-      paste('Editing: ', edited_list()[[1]])
+      paste('Editing: ', edited_list()[['name']])
     })
 
     # filter dataframe ----
@@ -92,24 +89,28 @@ server <- function(id, saved_lists_and_filters, edited_list) {
     # render datatable ----
     output$data <- renderTable(head(data[selected(), ], 12))
 
-    # save filters ----
-    observeEvent(input$save_filters, {
-      # Get the current list name
-      list_name <- input$name_saved_list
-      req(list_name != "")
-      # Collect current filter values
-      current_filters <- map(vars(), function(var) {
+    # current filters ----
+    current_filters <- reactive({
+      map(vars(), function(var) {
         list(
           var = var,
           value = input[[var]],
           na_switch_value = input[[paste0("na_switch_", var)]]
         )
       })
+    })
+
+    # save filters ----
+    observeEvent(input$save_filters, {
+      # Get the current list name
+      list_name <- input$name_saved_list
+      req(list_name != "")
       # Retrieve the current list of saved filters
       current_lists <- saved_lists_and_filters()
       # Assign current filters to the list using the list name as the key
       gene_list <- data[selected(), 1]
-      saved_data <- list(gene_list, current_filters)
+      # gene_list <- discard(gene_list, is.na)
+      saved_data <- list(unique(gene_list), current_filters())
       current_lists[[list_name]] <- saved_data
       # Update saved_lists_and_filters with the new list
       saved_lists_and_filters(current_lists)
@@ -145,7 +146,7 @@ server <- function(id, saved_lists_and_filters, edited_list) {
     # edit list ----
     observeEvent(edited_list(), {
       # Iterate over variables to reset each filter
-      filters_to_apply <- edited_list()[[2]]
+      filters_to_apply <- edited_list()[['filters']]
       map(filters_to_apply, function(filter) {
         var <- filter$var
         value <- filter$value
@@ -166,9 +167,10 @@ server <- function(id, saved_lists_and_filters, edited_list) {
         }
       })
       # Optionally reset other UI elements like text inputs, etc.
-      updateTextInput(session, "name_saved_list", value = edited_list()[[1]])
+      updateTextInput(session, "name_saved_list", value = edited_list()[['name']])
     })
 
+    # Show current filters ----
     initial_filters <- reactive({
       map(vars(), function(var) {
         data_var <- data[[var]]
@@ -189,73 +191,7 @@ server <- function(id, saved_lists_and_filters, edited_list) {
         )
       })
     })
-    # initial_filters <- reactive({
-    #   map(vars(), function(var) {
-    #     list(
-    #       var = var,
-    #       value = input[[var]],
-    #       na_switch_value = input[[paste0("na_switch_", var)]]
-    #     )
-    #   })
-    # })
 
-    current_filters <- reactive({
-      map(vars(), function(var) {
-        # data_var <- data[[var]]
-        # if (is.integer(data_var)) {
-        #   print(var)
-        #   val <- input[[var]]
-        #   val <- as.double(val)
-        #   print(is.double(val))
-        # } else {
-        #   val <- input[[var]]
-        # }
-        list(
-          var = var,
-          value = input[[var]],
-          na_switch_value = input[[paste0("na_switch_", var)]]
-        )
-      })
-    })
-
-    # Reactive expression to find differences
-    # filter_differences <- reactive({
-    #   map2(
-    #     initial_filters(),  # Call to initial_filters reactive
-    #     current_filters(),  # Call to current_filters reactive
-    #     ~ if (!identical(.x$value, .y$value) || !identical(.x$na_switch_value, .y$na_switch_value)) {
-    #       .y  # Return current filter if there are differences
-    #     } else {
-    #       NULL  # Return NULL if no differences
-    #     }
-    #   )
-    # })
-    # filter_differences <- reactive({
-    #   map2(
-    #     initial_filters(),  # Call to initial_filters reactive
-    #     current_filters(),  # Call to current_filters reactive
-    #     ~ {
-    #       # Determine if the values are numeric and if the initial is an integer
-    #       if (is.numeric(.x$value) && is.integer(.x$value)) {
-    #         initial_value <- as.double(.x$value)
-    #         current_value <- as.double(.y$value)
-    #       } else {
-    #         initial_value <- .x$value
-    #         current_value <- .y$value
-    #       }
-    #
-    #       # Now perform the comparison
-    #       value_equal <- identical(initial_value, current_value)
-    #       na_switch_equal <- identical(.x$na_switch_value, .y$na_switch_value)
-    #
-    #       if (!value_equal || !na_switch_equal) {
-    #         .y  # Return the current filter if there are differences
-    #       } else {
-    #         NULL  # Return NULL if there are no differences
-    #       }
-    #     }
-    #   )
-    # })
     filter_differences <- reactive({
       map2(
         initial_filters(),  # Call to initial_filters reactive
@@ -264,7 +200,6 @@ server <- function(id, saved_lists_and_filters, edited_list) {
           # Directly compare values using all.equal for exact numerical equality
           value_equal <- isTRUE(all.equal(.x$value, .y$value, check.attributes = FALSE))
           na_switch_equal <- identical(.x$na_switch_value, .y$na_switch_value)
-
           if (!value_equal || !na_switch_equal) {
             .y  # Return the current filter if there are differences
           } else {
@@ -274,33 +209,11 @@ server <- function(id, saved_lists_and_filters, edited_list) {
       )
     })
 
-    # Render UI for displaying differences
-    # output$current_filters_display <- renderUI({
-    #   differences <- filter_differences() # Fetch the reactive differences
-    #   valid_differences <- discard(differences, is.null) # Discard nulls (no changes)
-    #
-    #   if (length(valid_differences) > 0) {
-    #     do.call(tagList, lapply(valid_differences, function(filter) {
-    #       fluidRow(
-    #         column(6, p(filter$var)),
-    #         column(3, p("Value: ", toString(filter$value))),
-    #         column(3, p("NA switch: ", filter$na_switch_value))
-    #       )
-    #     }))
-    #   } else {
-    #     tagList(p("No filters have been changed from the initial state."))
-    #   }
-    # })
     output$current_filters_display <- renderUI({
       differences <- filter_differences() # Fetch the reactive differences
       valid_differences <- discard(differences, is.null) # Discard nulls (no changes)
-
       # Prepare the UI elements
       ui_elements <- list()
-
-      # Add a header that does not repeat
-
-
       if (length(valid_differences) > 0) {
         ui_elements[[1]] <- p("Current filters:")
         # Append each changed filter as a new UI element
@@ -314,15 +227,12 @@ server <- function(id, saved_lists_and_filters, edited_list) {
         ui_elements <- c(ui_elements, filter_ui) # Combine the header with filter details
       } else {
         # Add a message when no filters have changed
-        ui_elements[[2]] <- p("No filters have been changed from the initial state.")
+        ui_elements[[1]] <- p("No filters have been changed from the initial state.")
       }
-
       do.call(tagList, ui_elements) # Combine all UI elements into a tagList
     })
 
-
     # file upload server ----
     gene_list_upload$server("file_upload", saved_lists_and_filters, data)
-
   })
 }

@@ -2,7 +2,8 @@ box::use(
   shiny[moduleServer, NS, sidebarLayout, sidebarPanel, mainPanel, selectInput,
         actionButton, numericInput, fluidRow, HTML, checkboxInput, tableOutput,
         observeEvent, reactiveVal, req, observe, textOutput, renderPlot,
-        renderText, onStop, invalidateLater, plotOutput, isolate],
+        renderText, onStop, invalidateLater, plotOutput, isolate, uiOutput,
+        renderUI, tagList, updateSelectInput, reactiveValues],
   plotly[plotlyOutput, renderPlotly, ggplotly],
   ggplot2[...],
   fst[read.fst],
@@ -10,12 +11,15 @@ box::use(
   rrvgo[...],
   stats[...],
   callr[...],
-  org.Hs.eg.db[...]
+  org.Hs.eg.db[...],
+  crew[...]
 )
 
 box::use(
   app/logic/enrichment_utils
 )
+
+# NEED TO ADD ERROR HANDLER
 
 #' @export
 ui <- function(id) {
@@ -23,7 +27,9 @@ ui <- function(id) {
   sidebarLayout(
     sidebarPanel(
       selectInput(ns("gene_list_picker"), "select gene list",
-                  choices = NULL),
+                  choices = NULL,
+                  selected = NULL,
+                  multiple = TRUE),
       selectInput(ns("ontology_picker"), "select GO ontology",
                   choices = c("BP", "MF", "CC")),
       numericInput(ns("slice_enriched_terms"), "Top n% enriched terms to retain", 25),
@@ -33,139 +39,122 @@ ui <- function(id) {
                    HTML("Similarity score:<br> 0.9 (large), 0.7 (medium), 0.5 (small), 0.4 (tiny)"),
                    0.7),
       checkboxInput(ns("show_legend"), "Show legend"),
-      actionButton(ns("run_analysis"), "Analyse")
+      actionButton(ns("task"), "Analyse")
     ),
     mainPanel(
       textOutput(ns('status')),
-      plotlyOutput(ns("go_plot"))
+      uiOutput(ns("plots"))
       # tableOutput(ns("enriched_terms_table")),
     )
   )
 }
 
 #' @export
-server <- function(id, saved_lists_and_filters) {
+server <- function(id, saved_lists_and_filters, data) {
   moduleServer(id, function(input, output, session) {
-    data <- read.fst("./data/all_data_ege.fst")
 
-    # CREW ATTEMPT ----
-    # reactive values and outputs
-    # reactive_result <- reactiveVal(ggplot())
-    # reactive_poll <- reactiveVal(FALSE)
-    # output$go_plot <- renderPlot(reactive_result())
-    #
-    # # crew controller
-    # controller <- crew::crew_controller_local(workers = 4, seconds_idle = 10)
-    # controller$start()
-    # controller$autoscale()
-    # # make sure to terminate the controller on stop
-    # onStop(function() controller$terminate())
-    #
-    # # button to submit a task
-    # observeEvent(input$run_analysis, {
-    #   controller$push(
-    #     command = run_task(gene_list, background, ontology, pval, qval, percent_slice, threshold),
-    #     # pass the function to the workers, and arguments needed
-    #     data = list(run_task = run_task,
-    #                 gene_list = unique(saved_lists_and_filters()[[1]][[1]]),
-    #                 background = unique(data$gene_symbol),
-    #                 ontology = input$ontology_picker,
-    #                 pval = input$p_val_input,
-    #                 qval = input$q_val_input,
-    #                 percent_slice = input$slice_enriched_terms,
-    #                 threshold = input$similarity_score),
-    #     packages = c("stats", "clusterProfiler", "rrvgo", "ggplot2")
-    #   )
-    #   reactive_poll(TRUE)
-    # })
-    #
-    #
-    # # event loop to collect finished tasks
-    # observe({
-    #   req(reactive_poll())
-    #   invalidateLater(millis = 3000)
-    #   result <- controller$pop()$result
-    #   print(controller$summary())
-    #   if (!is.null(result)) {
-    #     reactive_result(result[[1]])
-    #     print(controller$summary()) # get a summary of workers
-    #   }
-    #   reactive_poll(controller$nonempty())
-    # })
+    observe({
+      saved_lists_and_filters()
+      updateSelectInput(session, 'gene_list_picker', choices = names(saved_lists_and_filters()), selected = NULL)
+    })
 
-    # CALLR WORKING ----
     run_task <- enrichment_utils$goAnalysis
 
-    reactive_status <- reactiveVal('No task submitted yet')
-    reactive_result <- reactiveVal(ggplot())
+    # reactive values
+    reactive_results <- reactiveValues()
+    reactive_status <- reactiveVal("No task submitted yet")
     reactive_poll <- reactiveVal(FALSE)
-    bg_proc <- reactiveVal(NULL)
-    output$go_plot <- renderPlotly(reactive_result())
+
+    # outputs
     output$status <- renderText({reactive_status()})
 
-    observeEvent(input$run_analysis, {
-      reactive_status('Running')
-      p <- callr::r_bg(
-        func = function(run_task, gene_list, background, ontology, pval, qval, percent_slice, threshold) {
-          library('stats')
-          library('clusterProfiler')
-          library('rrvgo')
-          library('ggplot2')
-          library('org.Hs.eg.db')
+    observe({
 
-          return(run_task(gene_list, background, ontology, pval, qval, percent_slice, threshold))
-        },
-        supervise = TRUE,
-        args = list(run_task = run_task,
-                    gene_list = unique(saved_lists_and_filters()[[1]][[1]]),
-                    background = unique(data$gene_symbol),
-                    ontology = input$ontology_picker,
-                    pval = input$p_val_input,
-                    qval = input$q_val_input,
-                    percent_slice = input$slice_enriched_terms,
-                    threshold = input$similarity_score)
-      )
+      lapply(names(reactive_results), function(task_name) {
+        # unlike lists and envs, you can't remove values from reactiveValues, so we need this extra check
+        # to make sure that we only get the plots that we asked for if we click the action
+        # button multiple times after each other with different inputs
+        if (task_name %in% isolate(input$gene_list_picker)) {
+          output[[task_name]] <- renderPlotly(reactive_results[[task_name]])
+        }
+      })
 
-      bg_proc(p)
+    })
+
+    output$plots <- renderUI({
+      ns <- NS(id)
+      req(reactive_poll() == FALSE)
+
+      # create a list that holds all the plot outputs
+      plot_output_list <- lapply(names(reactive_results), function(task_name) {
+        if (task_name %in% isolate(input$gene_list_picker)) {
+          plotlyOutput(session$ns(task_name))
+        }
+      })
+
+      # create a list of tags
+      tagList(plot_output_list)
+    })
+
+    # crew controller
+    controller <- crew_controller_local(workers = 4, seconds_idle = 10)
+    controller$start()
+
+    # make sure to terminate the controller on stop
+    onStop(function() controller$terminate())
+
+    # button to submit a task
+    observeEvent(input$task, {
+
+      # create arguments list dynamically
+      for (i in 1:length(input$gene_list_picker)) {
+
+        symbol <- input$gene_list_picker[i]
+
+        print(symbol)
+        print(saved_lists_and_filters()[[symbol]][[1]])
+        controller$push(
+          command = run_task(gene_list, background, ontology, pval, qval, percent_slice, threshold),
+          # pass the function to the workers, and arguments needed
+          data = list(run_task = run_task,
+                      gene_list = saved_lists_and_filters()[[symbol]][[1]],
+                      background = unique(data$gene_symbol),
+                      ontology = input$ontology_picker,
+                      pval = input$p_val_input,
+                      qval = input$q_val_input,
+                      percent_slice = input$slice_enriched_terms,
+                      threshold = input$similarity_score),
+          name = symbol,
+          packages = c("stats", "clusterProfiler", "rrvgo", "ggplot2", "org.Hs.eg.db")
+        )
+      }
+
       reactive_poll(TRUE)
+
+    })
+
+    # event loop to collect finished tasks
+    observe({
+      req(reactive_poll())
+      invalidateLater(millis = 500)
+      result <- controller$pop()
+
+      if (!is.null(result)) {
+
+        reactive_results[[result$name]] <- result$result[[1]]
+      }
+      reactive_poll(controller$nonempty())
     })
 
     observe({
-      req(reactive_poll())
-      invalidateLater(100)
-      p <- isolate(bg_proc())
-      if (p$is_alive() == FALSE) {
-        reactive_poll(FALSE)
-        bg_proc(NULL)
-
-        reactive_result(p$get_result())
-
-        reactive_status('Done')
+      if(isTRUE(reactive_poll())) {
+        reactive_status('Analysis running')
+      } else if (isFALSE(reactive_poll())) {
+        reactive_status('No task submitted yet')
       }
     })
-
-    # WORKING SYNC ----
-    # run_task <- enrichment_utils$goAnalysis
-    # go_plot <- reactiveVal()
-    #
-    # observeEvent(input$run_analysis, {
-    #   req(length(saved_lists_and_filters()) > 0)
-    #   p <- run_task(
-    #     gene_list = unique(saved_lists_and_filters()[[1]][[1]]),
-    #     background = data$gene_symbol,
-    #     ontology = input$ontology_picker,
-    #     pval = input$p_val_input,
-    #     qval = input$q_val_input,
-    #     percent_slice = input$slice_enriched_terms,
-    #     threshold = input$similarity_score
-    #   )
-    #
-    #   go_plot(p)
-    # })
-    #
-    # output$go_plot <- renderPlotly({
-    #   req(length(saved_lists_and_filters()) > 0)
-    #   go_plot()
-    # })
   })
 }
+
+
+

@@ -1,7 +1,7 @@
 # Filter utils ----
 box::use(
   shiny[moduleServer, NS,
-        sliderInput, selectInput, textAreaInput, checkboxInput, fluidRow]
+        sliderInput, selectInput, textAreaInput, checkboxInput, fluidRow, tabPanel]
 )
 
 # make ui ----
@@ -11,7 +11,7 @@ make_ui <- function(x, var, id, session) {
   if (is.numeric(x)) {
     rng <- range(x, na.rm = TRUE)
     fluidRow(
-      sliderInput(session$ns(var), var, min = rng[1], max = rng[2], value = rng),
+      sliderInput(session$ns(var), var, min = rng[1], max = rng[2], value = rng, step = 0.01),
       checkboxInput(session$ns(paste0("na_switch_", var)), paste0("na_switch_", var), TRUE)
     )
   } else if (is.factor(x)) {

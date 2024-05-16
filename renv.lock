@@ -850,6 +850,32 @@
       ],
       "Hash": "e8a1e41acf02548751f45c718d55aa6a"
     },
+    "crew": {
+      "Package": "crew",
+      "Version": "0.9.2",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R",
+        "R6",
+        "cli",
+        "data.table",
+        "getip",
+        "later",
+        "mirai",
+        "nanonext",
+        "processx",
+        "promises",
+        "ps",
+        "rlang",
+        "stats",
+        "tibble",
+        "tidyselect",
+        "tools",
+        "utils"
+      ],
+      "Hash": "10b6dadc3e0ac3d80e34277ae13c0bab"
+    },
     "crosstalk": {
       "Package": "crosstalk",
       "Version": "1.2.1",
@@ -1170,6 +1196,16 @@
         "methods"
       ],
       "Hash": "15e9634c0fcd294799e9b2e929ed1b86"
+    },
+    "getip": {
+      "Package": "getip",
+      "Version": "0.1-4",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R"
+      ],
+      "Hash": "0e81e7f976441581680fa2ebc5866212"
     },
     "ggforce": {
       "Package": "ggforce",
@@ -1781,6 +1817,17 @@
       ],
       "Hash": "18e9c28c1d3ca1560ce30658b22ce104"
     },
+    "mirai": {
+      "Package": "mirai",
+      "Version": "1.0.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R",
+        "nanonext"
+      ],
+      "Hash": "5c2161cc9fddf073ebfd2d9e25a3bf61"
+    },
     "munsell": {
       "Package": "munsell",
       "Version": "0.5.1",
@@ -1791,6 +1838,17 @@
         "methods"
       ],
       "Hash": "4fd8900853b746af55b81fda99da7695"
+    },
+    "nanonext": {
+      "Package": "nanonext",
+      "Version": "1.0.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R",
+        "later"
+      ],
+      "Hash": "bc33d655d4141d99012ef86efaebd978"
     },
     "nlme": {
       "Package": "nlme",
@@ -2115,17 +2173,6 @@
         "R"
       ],
       "Hash": "5e3c5dc0b071b21fa128676560dbe94d"
-    },
-    "reactlog": {
-      "Package": "reactlog",
-      "Version": "1.1.1",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Requirements": [
-        "R",
-        "jsonlite"
-      ],
-      "Hash": "745883ab4ed03f20593cd27334712eaf"
     },
     "reactome.db": {
       "Package": "reactome.db",

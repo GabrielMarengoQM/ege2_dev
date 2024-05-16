@@ -1,6 +1,6 @@
 # edit_clear.R
 box::use(
-  shiny[moduleServer, NS, fluidRow, uiOutput, actionButton, renderUI, 
+  shiny[moduleServer, NS, fluidRow, uiOutput, actionButton, renderUI,
         req, column, HTML, tagList, observe, observeEvent,
         updateActionButton, reactive]
 )
@@ -29,7 +29,7 @@ server <- function(id, saved_lists_and_filters, edited_list) {
       })
       do.call(tagList, edit_clear_lists)
     })
-    
+
     # Delete/Clear list ----
     observe({
       names_list <- names(saved_lists_and_filters()) # Access within observe ensures it's in a reactive context
@@ -39,10 +39,11 @@ server <- function(id, saved_lists_and_filters, edited_list) {
           saved_lists <- saved_lists_and_filters()
           saved_lists[[name]] <- NULL  # Remove the list
           saved_lists_and_filters(saved_lists)  # Update the reactive variable
+          edited_list(NULL)
         }, ignoreInit = TRUE)
       })
     })
-    
+
     # Edit list ----
     observe({
       names_list <- names(saved_lists_and_filters())
@@ -51,7 +52,7 @@ server <- function(id, saved_lists_and_filters, edited_list) {
         observeEvent(input[[paste0("edit_list_", name)]], {
           # Update the edited list reactive value with filters for currently edited list
           filters <- saved_lists_and_filters()[[name]][[2]]
-          data_to_add <- list(name, filters)
+          data_to_add <- list('name' = name, 'filters' = filters)
           edited_list(data_to_add)
         }, ignoreInit = TRUE)
       })
