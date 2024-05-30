@@ -3,7 +3,7 @@ box::use(
         actionButton, numericInput, fluidRow, HTML, checkboxInput, tableOutput,
         observeEvent, reactiveVal, req, observe, textOutput, renderPlot,
         renderText, onStop, invalidateLater, plotOutput, isolate, uiOutput,
-        renderUI, tagList, updateSelectInput, reactiveValues],
+        renderUI, tagList, updateSelectInput, reactiveValues, column, renderTable],
   plotly[plotlyOutput, renderPlotly, ggplotly],
   ggplot2[...],
   fst[read.fst],
@@ -11,7 +11,11 @@ box::use(
   rrvgo[...],
   stats[...],
   org.Hs.eg.db[...],
-  crew[...]
+  crew[...],
+  shinycssloaders[withSpinner],
+  bslib[card, card_header, card_body],
+  htmltools[p, h6],
+  purrr[map]
 )
 
 box::use(
@@ -37,7 +41,7 @@ ui <- function(id) {
       numericInput(ns("similarity_score"),
                    HTML("Similarity score:<br> 0.9 (large), 0.7 (medium), 0.5 (small), 0.4 (tiny)"),
                    0.7),
-      checkboxInput(ns("show_legend"), "Show legend"),
+      checkboxInput(ns("show_legend"), "Show legend", TRUE),
       actionButton(ns("task"), "Analyse")
     ),
     mainPanel(
@@ -54,7 +58,7 @@ server <- function(id, saved_lists_and_filters, data) {
 
     observe({
       saved_lists_and_filters()
-      updateSelectInput(session, 'gene_list_picker', choices = names(saved_lists_and_filters()), selected = NULL)
+      updateSelectInput(session, 'gene_list_picker', choices = names(saved_lists_and_filters()), selected = names(saved_lists_and_filters()))
     })
 
     run_task <- enrichment_utils$goAnalysis
@@ -68,32 +72,75 @@ server <- function(id, saved_lists_and_filters, data) {
     output$status <- renderText({reactive_status()})
 
     observe({
-
+      input$show_legend
       lapply(names(reactive_results), function(task_name) {
         # unlike lists and envs, you can't remove values from reactiveValues, so we need this extra check
         # to make sure that we only get the plots that we asked for if we click the action
         # button multiple times after each other with different inputs
         if (task_name %in% isolate(input$gene_list_picker)) {
-          output[[task_name]] <- renderPlotly(reactive_results[[task_name]])
+          plot_id <- paste(task_name, "plot", sep="_")
+          table_id <- paste(task_name, "table", sep="_")
+          output[[plot_id]] <- renderPlotly({
+            # Obtain the plot from reactive storage
+            plot <- reactive_results[[task_name]][[1]]
+
+            # Check if the legend should be shown
+            if (input$show_legend == FALSE) {
+              plot <- plot + theme(legend.position = "none")
+            } else {
+              plot <- plot + theme(legend.position = "bottom")
+            }
+          })
+          output[[table_id]] <- renderTable(reactive_results[[task_name]][[2]])
         }
       })
 
     })
 
+    # output$plots <- renderUI({
+    #   ns <- NS(id)
+    #   req(reactive_poll() == FALSE)
+    #   # create a list that holds all the plot outputs
+    #   plot_output_list <- lapply(names(reactive_results), function(task_name) {
+    #     if (task_name %in% isolate(input$gene_list_picker)) {
+    #       card(
+    #         card_header(h6(task_name)),
+    #         card_body(plotlyOutput(session$ns(task_name)) %>% withSpinner(color="#0dc5c1"))
+    #       )
+    #     }
+    #   })
+    #
+    #   # create a list of tags
+    #   tagList(plot_output_list)
+    # })
     output$plots <- renderUI({
       ns <- NS(id)
       req(reactive_poll() == FALSE)
-
       # create a list that holds all the plot outputs
-      plot_output_list <- lapply(names(reactive_results), function(task_name) {
-        if (task_name %in% isolate(input$gene_list_picker)) {
-          plotlyOutput(session$ns(task_name))
-        }
-      })
+      plot_output_list <- fluidRow(
+        map(names(reactive_results), function(task_name) {
+          if (task_name %in% isolate(input$gene_list_picker)) {
+            plot_id <- session$ns(paste(task_name, "plot", sep="_"))
+            table_id <- session$ns(paste(task_name, "table", sep="_"))
+            column(
+              width = 12,
+              card(
+                full_screen = TRUE,
+                card_header(h6(task_name)),
+                card_body(
+                  fluidRow(plotlyOutput(plot_id) %>% withSpinner(color="#0dc5c1")),
+                  fluidRow(tableOutput(table_id))
+                  ),
+              )
+            )
+          }
+        })
+      )
 
       # create a list of tags
-      tagList(plot_output_list)
+      # tagList(plot_output_list)
     })
+
 
     # crew controller
     controller <- crew_controller_local(workers = 4, seconds_idle = 10)

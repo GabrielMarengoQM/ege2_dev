@@ -1,83 +1,214 @@
-# Plotting utils
+# plots_utils.R
 box::use(
-  shiny[NS, fluidRow, column, req],
-  purrr[map_dfr, map],
+  shiny[NS, fluidRow, column, req, selectInput, textAreaInput,
+        checkboxInput, p, bindCache],
+  purrr[map_dfr, map, imap],
   dplyr[...],
-  plotly[plotlyOutput, renderPlotly, plot_ly, layout, toWebGL],
+  plotly[plotlyOutput, renderPlotly, plot_ly, layout, toWebGL, add_trace,
+         highlight],
   stats[as.formula],
-  bslib[card]
+  bslib[card, card_body, card_footer, card_title],
+  htmltools[a, p, div, h6],
+  shinycssloaders[withSpinner]
 )
 
-# Function to create UI dynamically
 #' @export
-createUI <- function(plot_ids, id, session) {
+barChartUI <- function(plot_ids, select_args, footers, titles, id, session) {
   ns <- NS(id)
-  # plot_number <- 12/length(plot_ids)
   fluidRow(
-    map(
-      plot_ids, ~ column(
-      width = 3,
-      card(plotlyOutput(outputId = session$ns(.x)),
-           full_screen = TRUE)
-      )
+    selectInput(session$ns('gene_list_picker'), 'Select gene list',
+                choices = names(select_args),
+                selected = names(select_args),
+                multiple = TRUE),
+    imap(
+      plot_ids, ~ {
+        title <- titles[[.y]]
+        # print(title)
+        url <- footers[[.y]]
+        text <- names(footers)[[.y]]
+        column(
+          width = 3, # 4 vis per row
+          card(
+            card_title(
+              htmltools::h6(title, style = "text-align: center;")
+            ),
+            card_body(
+              plotlyOutput(
+                session$ns(.x)
+              ) %>% withSpinner(color="#0dc5c1"),
+            ),
+            card_footer(
+              htmltools::div(
+                style = "text-align: center;",
+                htmltools::p('Source: ', style = "display: inline; margin-right: 5px;"),
+                htmltools::a(href = url, text, target = "_blank", style = "display: inline;")
+              )
+            ),
+            full_screen = TRUE
+          )
+        )
+      }
     )
   )
 }
 
-# add another func for violin plot thern add if statement to plot barchart if character or factor and
-# violin plot if numerical - then workout how to add sidebar
-
-# Function to create server plot logic dynamically
 #' @export
-plotServer <- function(plot_ids, data, gene_lists, bar_chart_func, violin_plot_func, genes_to_highlight, threshold_value, toggle_option, output) {
-  plots <- map(
+violinPlotUI <- function(plot_ids, select_args, footers, titles, id, session) {
+  ns <- NS(id)
+  fluidRow(
+    selectInput(session$ns('gene_list_picker'), 'Select gene list',
+                choices = names(select_args),
+                selected = names(select_args),
+                multiple = TRUE),
+    textAreaInput(session$ns('highlight_genes'), 'Enter genes to highlight'),
+    checkboxInput(session$ns('toggle_points'), 'Show all data points', value = FALSE),
+    imap(
+      plot_ids, ~ {
+        title <- titles[[.y]]
+        # print(title)
+        url <- footers[[.y]]
+        text <- names(footers)[[.y]]
+        column(
+          width = 3, # 4 vis per row
+          card(
+            card_title(
+              htmltools::h6(title, style = "text-align: center;")
+            ),
+            card_body(
+              plotlyOutput(
+                session$ns(.x)
+              ) %>% withSpinner(color="#0dc5c1"),
+            ),
+            card_footer(
+              htmltools::div(
+                style = "text-align: center;",
+                htmltools::p('Source: ', style = "display: inline; margin-right: 5px;"),
+                htmltools::a(href = url, text, target = "_blank", style = "display: inline;")
+              )
+            ),
+            full_screen = TRUE
+          )
+        )
+      }
+    )
+  )
+}
+
+#' @export
+barChartServer <- function(plot_ids, data, gene_lists, plot_func, output) {
+  plots <- purrr::imap(
     plot_ids, ~ {
       data_point <- data[[.x]]
+      # axis_title <- axis_titles[[.y]]
       output[[.x]] <- renderPlotly({
-        if (is.factor(data_point) | is.character(data_point)) {
-          bar_chart_func(gene_lists, data, .x, .x)
-        } else if (is.numeric(data_point)) {
-          violin_plot_func(gene_lists, data, .x, .x, genes_to_highlight, threshold_value, toggle_option)
-        }
+        # if (is.factor(data_point) || is.character(data_point)) {
+        plot_func(gene_lists, data, .x)
       })
     }
   )
 }
 
 #' @export
-barChart <- function(gene_list, data_source, data_col, custom_x_axis_title) {
-  combined_dataframe <- map_dfr(seq_along(gene_list), function(i) {
-    list_name <- names(gene_list)[i]
-    num <- length(setdiff(gene_list[[i]], data_source[["gene_symbol"]]))
+violinPlotServer <- function(plot_ids, data, gene_lists, plot_func, axis_titles, genes_to_highlight, threshold_values, toggle_option, output) {
+  plots <- purrr::imap(
+    plot_ids, ~ {
+      data_point <- data[[.x]]
+      current_threshold_value <- threshold_values[[.y]]
+      output[[.x]] <- renderPlotly({
+        if (is.numeric(data_point)) {
+          # Extract the threshold value using the index, handle NULL or missing indices
+          plot_data <- plot_func(gene_lists, data, .x, genes_to_highlight, current_threshold_value, toggle_option)
+          plot <- plot_data[[1]]
+          data <- plot_data[[2]]
+          if (length(genes_to_highlight) > 0) {
+            highlighted_data <- data[data$gene_symbol %in% genes_to_highlight, ]
+            plot <- plot %>%
+              add_trace(
+                data = highlighted_data,
+                x = ~gene_list_name,
+                y = as.formula(paste("~", .x)),
+                type = "scatter",
+                mode = "markers",
+                marker = list(color = "black", size = 10),
+                name = "Highlighted Genes"
+              )
+          } else {
+            plot
+          }
+        }
+      }) %>%
+        bindCache(
+          c(
+            genes_to_highlight,
+            gene_lists,
+            toggle_option
+          )
+        )
+    }
+  )
+}
 
-    new_impc2 <- data_source %>%
-      dplyr::filter(gene_symbol %in% gene_list[[i]]) %>%
-      dplyr::select(gene_symbol, !! sym(data_col)) %>%
-      dplyr::distinct() %>%
-      dplyr::count(!! sym(data_col)) %>%
-      dplyr::mutate(percentage = round(n/sum(n)*100, 2)) %>%
-      dplyr::mutate(name = list_name)
-  })
-  # print(combined_dataframe)
-  plot <- plot_ly(combined_dataframe, x = as.formula(paste("~", data_col)), y = ~percentage, color = ~name,
-                  textposition = 'outside', text = ~percentage, type = "bar")
+#' @export
+barChart <- function(gene_list, data_source, data_col) {
+
+  if (is.factor(data_source[[data_col]])) {
+
+    combined_dataframe <- map_dfr(seq_along(gene_list), function(i) {
+      list_name <- names(gene_list)[i]
+      num <- length(setdiff(gene_list[[i]], data_source[["gene_symbol"]]))
+      df <- data_source %>%
+        dplyr::filter(gene_symbol %in% gene_list[[i]]) %>%
+        dplyr::select(gene_symbol, !! sym(data_col)) %>%
+        dplyr::distinct() %>%
+        dplyr::count(!! sym(data_col)) %>%
+        dplyr::mutate(percentage = round(n/sum(n)*100, 2)) %>%
+        dplyr::mutate(name = list_name)
+    })
+
+    plot <- plot_ly(combined_dataframe, x = as.formula(paste("~", data_col)), y = ~percentage, color = ~name,
+                    textposition = 'outside', text = ~percentage, type = "bar")
+  } else if (is.character(data_source[[data_col]])) {
+    combined_dataframe <- map_dfr(seq_along(gene_list), function(i) {
+      list_name <- names(gene_list)[i]
+      num <- length(setdiff(gene_list[[i]], data_source[["gene_symbol"]]))
+      df <- data_source %>%
+        dplyr::filter(gene_symbol %in% gene_list[[i]]) %>%
+        dplyr::select(gene_symbol, !! sym(data_col)) %>%
+        dplyr::mutate(current_col = ifelse(is.na(!! sym(data_col)), "NA", "nonNA")) %>%
+        dplyr::select(gene_symbol, current_col)  %>%
+        dplyr::distinct() %>%
+        dplyr::group_by(current_col) %>%
+        dplyr::summarize(count = n()) %>%
+        dplyr::ungroup() %>%
+        dplyr::mutate(percentage = round((count / sum(count)) * 100, 2)) %>%
+        dplyr::mutate(name = list_name)
+
+    })
+    # print(combined_dataframe)
+    plot <- plot_ly(combined_dataframe, x = ~current_col, y = ~percentage, color = ~name,
+                    textposition = 'outside', text = ~percentage, type = "bar")
+
+  }
 
   plot <- plot %>%
     layout(
-      xaxis = list(title = custom_x_axis_title),
+      xaxis = list(title = ""),
+      # xaxis = list(title = custom_x_axis_title),
       yaxis = list(title = "Percentage of genes"),
       showlegend = TRUE
     )
 }
 
 #' @export
-violinPlot <- function(gene_lists, raw_data, column, custom_y_axis_title, genes_to_highlight, threshold_value, toggle_option) {
+violinPlot <- function(gene_lists, raw_data, column, genes_to_highlight, threshold_value, toggle_option) {
   data <- do.call(rbind, lapply(names(gene_lists), function(gene_list_name) {
     genes <- gene_lists[[gene_list_name]]
-    metrics_data <- raw_data[raw_data$gene_symbol %in% genes, c('gene_symbol', column)]
+    metrics_data <- raw_data[raw_data$gene_symbol %in% genes, c('gene_symbol', column)] %>%
+      distinct()
     metrics_data$gene_list_name <- gene_list_name
     return(metrics_data)
   }))
+
 
   if (toggle_option == TRUE) {
     points_setting <- "all"
@@ -98,29 +229,29 @@ violinPlot <- function(gene_lists, raw_data, column, custom_y_axis_title, genes_
     hoverinfo = "text"  # Include gene symbol and metric value in hover text
   )
 
-  # Add highlight points for individual genes
-  if (length(genes_to_highlight > 0)) {
-    violin_plot <- violin_plot %>%
-      highlight("plotly_selecting") %>%
-      # Add points for highlighting
-      add_trace(
-        data = data[data$gene_symbol %in% genes_to_highlight, ],  # Only include specified genes
-        type = "scatter",
-        mode = "markers",
-        x = ~gene_list_name,
-        y = as.formula(paste("~", column)),
-        text = ~paste("Gene: ", gene_symbol, "<br>", column, ": ", get(column)),
-        marker = list(color = "black", size = 10),
-        hoverinfo = "text",
-        name = "Searched Genes"  # Legend entry for the added trace
-      )
-  }
+  # # Add highlight points for individual genes
+  # if (length(genes_to_highlight > 0)) {
+  #   violin_plot <- violin_plot %>%
+  #     highlight("plotly_selecting") %>%
+  #     # Add points for highlighting
+  #     add_trace(
+  #       data = data[data$gene_symbol %in% genes_to_highlight, ],  # Only include specified genes
+  #       type = "scatter",
+  #       mode = "markers",
+  #       x = ~gene_list_name,
+  #       y = as.formula(paste("~", column)),
+  #       text = ~paste("Gene: ", gene_symbol, "<br>", column, ": ", get(column)),
+  #       marker = list(color = "black", size = 10),
+  #       hoverinfo = "text",
+  #       name = "Searched Genes"  # Legend entry for the added trace
+  #     )
+  # }
 
   # Remove x-axis title
   violin_plot <- violin_plot %>%
     layout(
       xaxis = list(title = ""),
-      yaxis = list(title = custom_y_axis_title),
+      yaxis = list(title = "Score"),
       showlegend = TRUE
     )
 
@@ -156,5 +287,5 @@ violinPlot <- function(gene_lists, raw_data, column, custom_y_axis_title, genes_
 
   violin_plot %>% toWebGL()
 
-  return(violin_plot)
+  return(list(violin_plot, data))
 }

@@ -1,6 +1,6 @@
 {
     "dialog-state": {
-        "query": "saved_lists_and_filters",
+        "query": "print",
         "path": "",
         "regex": false,
         "caseSensitive": false,
@@ -9,7 +9,7 @@
         "useGitGrep": true,
         "excludeGitIgnore": true,
         "excludeFilePatterns": [],
-        "resultsCount": 50,
+        "resultsCount": 36,
         "errorCount": 0,
         "replaceErrors": "",
         "projectRelative": true

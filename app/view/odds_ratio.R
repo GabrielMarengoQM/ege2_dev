@@ -1,7 +1,8 @@
 box::use(
   shiny[moduleServer, NS, sidebarLayout, sidebarPanel, selectInput, actionButton,
         mainPanel, textOutput, uiOutput, plotOutput, renderPlot, reactiveVal,
-        observe, req, updateSelectInput, observeEvent, tableOutput, renderTable]
+        observe, req, updateSelectInput, observeEvent, tableOutput, renderTable,
+        renderText]
 )
 
 box::use(
@@ -40,6 +41,7 @@ server <- function(id, saved_lists_and_filters, data) {
 
     forest_plot <- reactiveVal()
     table_data <- reactiveVal()
+    status <- reactiveVal('Select gene list(s) and run analysis')
 
     observeEvent(input$task, {
       req(length(saved_lists_and_filters()) > 0)
@@ -52,10 +54,12 @@ server <- function(id, saved_lists_and_filters, data) {
 
       forest_plot(enrichment_utils$forestPlot(dat))
       table_data(dat)
+      status(NULL)
     })
 
     output$plot <- renderPlot({forest_plot()})
     output$table <- renderTable({table_data()})
+    output$status <- renderText({status()})
 
   })
 }

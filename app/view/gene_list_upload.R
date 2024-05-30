@@ -131,7 +131,7 @@ server <- function(id, saved_lists_and_filters, data) {
         # Assign current filters to the list using the list name as the key
         gene_list <- file_data_reactive()$genelist_names_list[[list_name]]
         current_filters[[1]]$value <- paste(gene_list, collapse = ';')
-        saved_data <- list(gene_list, current_filters)
+        saved_data <- list('gene_list'=gene_list,'filters' = current_filters)
         current_lists[[list_name]] <- saved_data
       }
       saved_lists_and_filters(current_lists)

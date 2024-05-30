@@ -33,6 +33,8 @@ goAnalysis <- function(gene_list, background, ontology, pval, qval, percent_slic
                           pvalueCutoff  = pval,
                           qvalueCutoff  = qval,
                           readable      = TRUE)
+  class(go_analysis)
+  typeof(go_analysis)
 
   simMatrix <- rrvgo::calculateSimMatrix(go_analysis$ID,
                                   orgdb="org.Hs.eg.db",
@@ -61,7 +63,8 @@ goAnalysis <- function(gene_list, background, ontology, pval, qval, percent_slic
   # Only show top 5 most significantly enriched terms
   p <- scat_p + geom_text(aes(label=parentTerm), data=subset(df[1:5,], parent == rownames(df[1:5,])), size=4, color="black")
 
-  return(p)
+  return(list(p, go_analysis))
+  # return(p)
 }
 
 #' @export
@@ -81,7 +84,7 @@ reactomeAnalysis <- function(gene_list, background, pval, no_pathways_shown) {
   edo <- enrichplot::pairwise_termsim(enriched_pathway)
   plot <- enrichplot::emapplot(edo, showCategory = no_pathways_shown)
 
-  return(plot)
+  return(list(plot, enriched_pathway_table))
 }
 # # test ----
 # gene_list <- unique(data$gene_symbol)[1:100]
@@ -124,7 +127,7 @@ oddsRatioPlot <- function(compare_list_option, gene_list, dataset, index) {
       unique()
   }
 
-  print(compare_list)
+  # print(compare_list)
 
   df <- dataset %>%
     select(gene_symbol) %>%
@@ -132,11 +135,11 @@ oddsRatioPlot <- function(compare_list_option, gene_list, dataset, index) {
     mutate(selected = ifelse(gene_symbol %in% gene_list, "y", "n")) %>%
     mutate(compared = ifelse(gene_symbol %in% compare_list, "y", "n"))
 
-  print(df)
+  # print(df)
 
   contigency_table <- table(df$compared, df$selected)
 
-  print(contigency_table)
+  # print(contigency_table)
 
   # Can't continue with incorrect contingency table
   # Check if the dimension is 2x1
@@ -144,7 +147,7 @@ oddsRatioPlot <- function(compare_list_option, gene_list, dataset, index) {
     # Add a new column 'y' with values 0, 0
     contigency_table <- cbind(contigency_table, y = c(0, 0))
     # Printing the updated table
-    print(contigency_table)
+    # print(contigency_table)
   }
 
   or_all <- oddsratio(contigency_table, method = "wald")
@@ -159,7 +162,7 @@ oddsRatioPlot <- function(compare_list_option, gene_list, dataset, index) {
     UL = or_all_upper,
     pvalue = or_all_pvalue
     )
-  print(or_all_df)
+  # print(or_all_df)
   return(or_all_df)
 }
 
@@ -174,7 +177,7 @@ batchOddsRatioPlots <- function(list_of_lists, dataset, compare_list_option, odd
     list_name <- names(list_of_lists)[[i]]
 
     # Print to track which list is currently processing
-    print(paste("Processing list:", list_name))
+    # print(paste("Processing list:", list_name))
 
     # Call your existing function
     results <- odds_ratio_func(compare_list_option = compare_list_option, gene_list = gene_list, dataset = dataset)
