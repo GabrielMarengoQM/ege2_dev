@@ -15,9 +15,10 @@ box::use(
   bslib[card, card_header, card_body],
   htmltools[p, h6],
   shinycssloaders[withSpinner],
-  purrr[map]
+  purrr[map],
+  conflicted[conflict_prefer]
 )
-
+# conflict_prefer("plot", "ggplot2")
 box::use(
   app/logic/enrichment_utils
 )

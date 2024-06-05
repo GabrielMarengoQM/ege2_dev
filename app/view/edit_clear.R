@@ -9,7 +9,8 @@ box::use(
 ui <- function(id) {
   ns <- NS(id)
   fluidRow(
-    uiOutput(ns("edit_clear_lists"))
+    uiOutput(ns("edit_clear_lists")),
+    uiOutput(ns("msg"))
   )
 }
 
@@ -22,12 +23,18 @@ server <- function(id, saved_lists_and_filters, edited_list) {
       req(length(names_list) > 0)
       edit_clear_lists <- lapply(names_list, function(name) {
         fluidRow(
-          column(2, HTML(paste(name, ":"))),
-          column(2, actionButton(session$ns(paste0("edit_list_", name)), label = 'Edit')),
-          column(2, actionButton(session$ns(paste0("clear_list_", name)), label = "Clear"))
+          column(6, HTML(paste(name, ":"))),
+          column(3, actionButton(session$ns(paste0("edit_list_", name)), label = 'Edit/Show filters')),
+          column(3, actionButton(session$ns(paste0("clear_list_", name)), label = "Delete"))
         )
       })
       do.call(tagList, edit_clear_lists)
+    })
+
+    output$msg <- renderUI({
+      req(length(saved_lists_and_filters()) == 0)
+
+      'No saved lists'
     })
 
     # Delete/Clear list ----

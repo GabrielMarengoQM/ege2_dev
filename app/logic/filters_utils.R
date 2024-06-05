@@ -1,4 +1,4 @@
-# Filter utils ----
+# Filter utils.R
 box::use(
   shiny[moduleServer, NS,
         sliderInput, selectInput, textAreaInput, checkboxInput, fluidRow, tabPanel]
@@ -90,11 +90,9 @@ filter_var <- function(x, val, switch_val) {
         !is.na(x)
       }
     }
-
+    
   } else {
     # No control, so don't filter
     TRUE
   }
 }
-
-

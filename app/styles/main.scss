@@ -1,0 +1,9 @@
+.scrollable-sidebar {
+    height: 100vh !important; /* Set the height to the full viewport height */
+    overflow-y: auto !important; /* Allow vertical scrolling */
+    overflow-x: hidden !important; /* Prevent horizontal scrolling */
+}
+
+.sidebar-content.bslib-gap-spacing {
+  padding-top: 24px !important;
+}

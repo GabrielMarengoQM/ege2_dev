@@ -15,9 +15,10 @@ box::use(
   shinycssloaders[withSpinner],
   bslib[card, card_header, card_body],
   htmltools[p, h6],
-  purrr[map]
+  purrr[map],
+  conflicted[conflict_prefer]
 )
-
+# conflict_prefer("plot", "ggplot2")
 box::use(
   app/logic/enrichment_utils
 )
@@ -82,13 +83,13 @@ server <- function(id, saved_lists_and_filters, data) {
           table_id <- paste(task_name, "table", sep="_")
           output[[plot_id]] <- renderPlotly({
             # Obtain the plot from reactive storage
-            plot <- reactive_results[[task_name]][[1]]
+            plot_this <- reactive_results[[task_name]][[1]]
 
             # Check if the legend should be shown
             if (input$show_legend == FALSE) {
-              plot <- plot + theme(legend.position = "none")
+              plot_this <- plot_this + theme(legend.position = "none")
             } else {
-              plot <- plot + theme(legend.position = "bottom")
+              plot_this <- plot_this + theme(legend.position = "bottom")
             }
           })
           output[[table_id]] <- renderTable(reactive_results[[task_name]][[2]])

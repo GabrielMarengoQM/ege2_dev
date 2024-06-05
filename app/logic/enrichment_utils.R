@@ -9,8 +9,11 @@ box::use(
   enrichplot[pairwise_termsim, emapplot],
   epitools[...],
   ReactomePA[enrichPathway],
-  enrichplot[pairwise_termsim, emapplot]
+  enrichplot[pairwise_termsim, emapplot],
+  conflicted[conflict_prefer]
 )
+
+# conflict_prefer("plot", "ggplot2")
 
 #' @export
 status_message <- function(val) {
@@ -69,7 +72,7 @@ goAnalysis <- function(gene_list, background, ontology, pval, qval, percent_slic
 
 #' @export
 reactomeAnalysis <- function(gene_list, background, pval, no_pathways_shown) {
-
+  # conflicted::conflict_prefer("plot", "ggplot2")
   # Enrichment
   enriched_pathway <- background %>%
     dplyr::filter(gene_symbol %in% gene_list) %>%
@@ -82,32 +85,20 @@ reactomeAnalysis <- function(gene_list, background, pval, no_pathways_shown) {
 
   # Plots
   edo <- enrichplot::pairwise_termsim(enriched_pathway)
-  plot <- enrichplot::emapplot(edo, showCategory = no_pathways_shown)
+  plot_this <- enrichplot::emapplot(edo, showCategory = no_pathways_shown)
 
-  return(list(plot, enriched_pathway_table))
+  return(list(plot_this, enriched_pathway_table))
 }
 # # test ----
 # gene_list <- unique(data$gene_symbol)[1:100]
-# background <- unique(data$gene_symbol)
+# background <- data[,c('gene_symbol', "entrez_id")] %>% distinct()
 # pval <- 0.05
 # no_pathways_shown <- 10
-# # Enrichment
+# reactome_data <- reactomeAnalysis(gene_list, background, pval, no_pathways_shown)
+# 
 # enriched_pathway <- background %>%
-#   dplyr::filter(gene_symbol %in% gene_list) %>%
-#   dplyr::pull(entrez_id) %>%
-#   ReactomePA::enrichPathway(gene = ., pvalueCutoff = pval, readable = TRUE)
-#
-# # Table
-# enriched_pathway_table <- data.frame(enriched_pathway, row.names = NULL) %>%
-#   dplyr::select(ID, Description, qvalue)
-#
-# # Plots
-# edo <- enrichplot::pairwise_termsim(enriched_pathway)
-# plot <- enrichplot::emapplot(edo, showCategory = no_pathways_shown)
+#   dplyr::filter(gene_symbol %in% gene_list) 
 
-
-# p <- reactomeAnalysis(unique(data$gene_symbol)[1:100], unique(data[,1:2]), 0.05, 10)
-# p
 #' @export
 oddsRatioPlot <- function(compare_list_option, gene_list, dataset, index) {
   if (compare_list_option == "OMIM Disease genes") {
@@ -197,7 +188,7 @@ batchOddsRatioPlots <- function(list_of_lists, dataset, compare_list_option, odd
 
 #' @export
 forestPlot <- function(dat) {
-  plot <- ggplot(dat, aes(y = Index, x = OR)) +
+  plot_this <- ggplot(dat, aes(y = Index, x = OR)) +
     geom_point(shape = 18, size = 5) +
     geom_errorbarh(aes(xmin = LL, xmax = UL), height = 0.25) +
     geom_vline(xintercept = 1, color = "red", linetype = "dashed", cex = 1, alpha = 0.5) +
@@ -213,7 +204,7 @@ forestPlot <- function(dat) {
           axis.text.y = element_text(size = 12, colour = "black"),
           axis.text.x.bottom = element_text(size = 12, colour = "black"),
           axis.title.x = element_text(size = 12, colour = "black"))
-  return(plot)
+  return(plot_this)
 }
 
 

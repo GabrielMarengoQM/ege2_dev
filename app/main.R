@@ -3,11 +3,14 @@ box::use(
   shiny[bootstrapPage, div, moduleServer, NS, renderUI, tags,
         uiOutput, observe, reactiveVal, fluidRow, column, bookmarkButton,
         setBookmarkExclude, enableBookmarking, onBookmark, onRestore, req,
-        navbarPage, tabPanel, navbarMenu],
-  htmltools[p],
+        navbarPage, tabPanel, navbarMenu, reactive],
+  htmltools[p, h4],
   fst[read.fst],
-  bslib[navset_card_underline, nav_panel]
+  bslib[navset_card_underline, nav_panel, page_fillable, layout_sidebar, sidebar, page_sidebar],
+  conflicted[conflict_prefer, conflict_prefer_all]
 )
+
+# conflict_prefer("plot", )
 
 box::use(
   app/view/filters,
@@ -16,7 +19,10 @@ box::use(
   app/view/reactome_enrichment,
   app/view/odds_ratio,
   app/view/bar_chart_mod,
-  app/view/violin_plot_mod
+  app/view/violin_plot_mod,
+  app/view/currently_applied_filters_overview,
+  app/view/name_and_save_list,
+  app/view/user_table
 )
 
 # enable Shiny bookmarking ----
@@ -28,15 +34,55 @@ ui <- function(id) {
   navbarPage(
     'EGE',
     # Generate gene lists ----
+    # tabPanel(
+    #   'Generate gene lists',
+    #   fluidRow(
+    #     filters$ui(ns("filters"))
+    #   ),
+    #   fluidRow(
+    #     column(1, p("Saved lists")),
+    #     column(8, edit_clear$ui(ns("edit_clear"))),
+    #     column(3, bookmarkButton())
+    #   ),
+    #   fluidRow(
+    #     currently_applied_filters_overview$ui(ns("currently_applied_filters"))
+    #   ),
+    #   fluidRow(
+    #     name_and_save_list$ui(ns("name_and_save_list"))
+    #   )
+    # ),
     tabPanel(
       'Generate gene lists',
-      fluidRow(
-        filters$ui(ns("filters"))
-      ),
-      fluidRow(
-        column(1, p("Saved lists")),
-        column(8, edit_clear$ui(ns("edit_clear"))),
-        column(3, bookmarkButton())
+      page_fillable(
+        page_sidebar(
+          # sidebar
+          sidebar = sidebar(
+            filters$ui(ns("filters")),
+            width = 600,
+            title = h4('Filters'),
+            class = 'scrollable-sidebar'
+          ),
+          # main
+          h4('Table'),
+          fluidRow(
+            user_table$ui(ns("user_table"))
+          ),
+          h4('Save list'),
+          fluidRow(
+            name_and_save_list$ui(ns("name_and_save_list"))
+          ),
+          h4('Saved lists'),
+          fluidRow(
+            edit_clear$ui(ns("edit_clear"))
+          ),
+          h4('Current filters'),
+          fluidRow(
+            currently_applied_filters_overview$ui(ns("currently_applied_filters"))
+          ),
+          fluidRow(
+            column(width=3, bookmarkButton())
+          )
+        )
       )
     ),
     # Plots ----
@@ -105,10 +151,20 @@ server <- function(id) {
     # reactive values ----
     saved_lists_and_filters <- reactiveVal(list())
     edited_list <- reactiveVal(NULL)
+    filter_differences <- reactiveVal(NULL)
+    vars_global <- reactiveVal(NULL)
+    vars <- reactive(names(data))
+    save_filters <- reactiveVal(NULL)
+    clear_filters <- reactiveVal(NULL)
+    current_genes <- reactiveVal(NULL)
 
     # Generate gene lists ----
-    filters$server("filters", saved_lists_and_filters, edited_list, data, nice_col_names)
+    filters$server("filters", saved_lists_and_filters, edited_list, data, nice_col_names, filter_differences, vars, save_filters, clear_filters, current_genes)
     edit_clear$server("edit_clear", saved_lists_and_filters, edited_list)
+    currently_applied_filters_overview$server("currently_applied_filters", filter_differences, vars, nice_col_names, clear_filters)
+    name_and_save_list$server("name_and_save_list", save_filters)
+    user_table$server("user_table", current_genes)
+
     # Plots
     bar_chart_mod$server(
       'impc_bar_charts',
